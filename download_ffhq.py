@@ -61,10 +61,7 @@ gdrive = None
 
 def download_file(session, file_spec, stats, chunk_size=128, num_attempts=10):
     global gdrive
-    if gdrive is None:
-        gauth = GoogleAuth()
-        gauth.CommandLineAuth()
-        gdrive = GoogleDrive(gauth)
+
     file_path = file_spec['file_path']
     file_url = file_spec['file_url']
     tag = "uc?id="
@@ -74,9 +71,11 @@ def download_file(session, file_spec, stats, chunk_size=128, num_attempts=10):
     if file_dir:
         os.makedirs(file_dir, exist_ok=True)
     download_file = gdrive.CreateFile({'id': file_id})
-    print( "Download file {} to {} ...".format(file_id, file_path))
-    download_file.GetContentFile(file_path)
-    
+    try:
+        download_file.GetContentFile(file_path)
+        print( "Download file {} to {} ...".format(file_id, file_path))
+    except:
+        print( "Download file {} failed ... ".format(file_id))
 
 # This doesn't work as files are too big, and quota exceeds frequently appears
 def download_file_old(session, file_spec, stats, chunk_size=128, num_attempts=10):
@@ -374,6 +373,12 @@ def recreate_aligned_images(json_data, dst_dir='realign1024x1024', output_size=1
 #----------------------------------------------------------------------------
 
 def run(tasks, **download_kwargs):
+    global gdrive
+    if gdrive is None:
+        gauth = GoogleAuth()
+        gauth.CommandLineAuth()
+        gdrive = GoogleDrive(gauth)
+
     if not os.path.isfile(json_spec['file_path']) or not os.path.isfile('LICENSE.txt'):
         print('Downloading JSON metadata...')
         download_files([json_spec, license_specs['json']], **download_kwargs)
@@ -382,6 +387,7 @@ def run(tasks, **download_kwargs):
     with open(json_spec['file_path'], 'rb') as f:
         json_data = json.load(f, object_pairs_hook=OrderedDict)
 
+        
     if 'stats' in tasks:
         print_statistics(json_data)
 
@@ -414,7 +420,7 @@ def run_cmdline(argv):
     parser.add_argument('-w', '--wilds',        help='download in-the-wild images as PNG (955 GB)', dest='tasks', action='append_const', const='wilds')
     parser.add_argument('-r', '--tfrecords',    help='download multi-resolution TFRecords (273 GB)', dest='tasks', action='append_const', const='tfrecords')
     parser.add_argument('-a', '--align',        help='recreate 1024x1024 images from in-the-wild images', dest='tasks', action='append_const', const='align')
-    parser.add_argument('--num_threads',        help='number of concurrent download threads (default: 32)', type=int, default=32, metavar='NUM')
+    parser.add_argument('--num_threads',        help='number of concurrent download threads (default: 32)', type=int, default=1, metavar='NUM')
     parser.add_argument('--status_delay',       help='time between download status prints (default: 0.2)', type=float, default=0.2, metavar='SEC')
     parser.add_argument('--timing_window',      help='samples for estimating download eta (default: 50)', type=int, default=50, metavar='LEN')
     parser.add_argument('--chunk_size',         help='chunk size for each download thread (default: 128)', type=int, default=128, metavar='KB')
