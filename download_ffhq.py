@@ -112,7 +112,7 @@ def download_file(session, file_spec, stats, chunk_size=128, num_attempts=10):
                 # Google Drive quota exceeded.
                 if 'Google Drive - Quota exceeded' in data_str:
                     if not attempts_left:
-                        raise IOError("Google Drive download quota exceeded -- please try again later")
+                        raise IOError("Google Drive download quota exceeded -- please try again later, {}".format(data_str))
 
             # Last attempt => raise error.
             if not attempts_left:
