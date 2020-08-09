@@ -27,6 +27,8 @@ import argparse
 import itertools
 import shutil
 from collections import OrderedDict, defaultdict
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
 
 PIL.ImageFile.LOAD_TRUNCATED_IMAGES = True # avoid "Decompressed Data Too Large" error
 
@@ -55,8 +57,29 @@ license_specs = {
 }
 
 #----------------------------------------------------------------------------
+gdrive = None
 
 def download_file(session, file_spec, stats, chunk_size=128, num_attempts=10):
+    global gdrive
+    if gdrive is None:
+        gauth = GoogleAuth()
+        gauth.CommandLineAuth()
+        gdrive = GoogleDrive(gauth)
+    file_path = file_spec['file_path']
+    file_url = file_spec['file_url']
+    tag = "uc?id="
+    id_pos = file_url.index(tag) + len( tag )
+    file_id = file_url[id_pos:]
+    file_dir = os.path.dirname(file_path)
+    if file_dir:
+        os.makedirs(file_dir, exist_ok=True)
+    download_file = gdrive.CreateFile({'id': file_id})
+    print( "Download file {} to {} ...".format(file_id, file_path))
+    download_file.GetContentFile(file_path)
+    
+
+# This doesn't work as files are too big, and quota exceeds frequently appears
+def download_file_old(session, file_spec, stats, chunk_size=128, num_attempts=10):
     file_path = file_spec['file_path']
     file_url = file_spec['file_url']
     file_dir = os.path.dirname(file_path)
